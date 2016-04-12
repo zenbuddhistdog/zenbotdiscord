@@ -9,25 +9,12 @@ namespace Zen.Zenbot
 {
     public class Bot
     {
-        private static string OwnerID;
         private static string DenyMsg = "I can't do that, {0}.";
 
         private const string CommandPrefix = @"&";
         private static Regex CommandPattern = new Regex(@"^" + CommandPrefix + @"([^\s]+)\s?(.*)");
 
-        private static List<Command> Commands = new List<Command>
-        {
-            new Command("Logout",
-                (c, m) => m.Author.ID == OwnerID,
-                (c, m) => {
-                    c.SendMessageToChannel("Goodbye!", m.Channel);
-                    c.Logout();
-                },
-                (c, m) => c.SendMessageToChannel(string.Format(DenyMsg, m.Author.Username), m.Channel),
-                (c, m, e) => Console.WriteLine(m.ToString() + Environment.NewLine + e.ToString())
-            ),
-        };
-
+        private List<Command> Commands;
         private DiscordClient Client;
         private BotData Data;
 
@@ -36,14 +23,29 @@ namespace Zen.Zenbot
             this.Client = Client;
             this.Data = Data;
 
-            OwnerID = Data.OwnerID;
-
             Client.MessageReceived += Client_MessageReceived;
             Client.MentionReceived += Client_MentionReceived;
             Client.Connected += Client_Connected;
             Client.SocketClosed += Client_SocketClosed;
             Client.UnknownMessageTypeReceived += Client_UnknownMessageTypeReceived;
             Client.TextClientDebugMessageReceived += Client_TextClientDebugMessageReceived;
+
+            BuildCommands();
+        }
+
+        private void BuildCommands()
+        {
+            Commands = new List<Command> {
+                new Command("Logout",
+                    (m) => m.Author.ID == Data.OwnerID,
+                    (m) => {
+                        Client.SendMessageToChannel("Goodbye!", m.Channel);
+                        Client.Logout();
+                    },
+                    (m) => Client.SendMessageToChannel(string.Format(DenyMsg, m.Author.Username), m.Channel),
+                    (m, e) => Console.WriteLine(m.ToString() + Environment.NewLine + e.ToString())
+                ),
+            };
         }
 
         private void Client_TextClientDebugMessageReceived(object sender, LoggerMessageReceivedArgs e)
@@ -86,7 +88,7 @@ namespace Zen.Zenbot
                 return;
 
             var cmdName = extracted.Groups[1].Value.ToUpper();
-            Commands.Where(c => c.Name.ToUpper() == cmdName).Single().Invoke(Client, e);
+            Commands.Where(c => c.Name.ToUpper() == cmdName).Single().Invoke(e);
         }
     }
 }

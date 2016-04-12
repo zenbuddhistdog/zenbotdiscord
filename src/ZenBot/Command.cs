@@ -4,9 +4,9 @@ using System;
 
 namespace Zen.Zenbot
 {
-    public delegate bool Predicate(DiscordClient Client, DiscordMessageEventArgs Message);
-    public delegate void Implment(DiscordClient Client, DiscordMessageEventArgs Message);
-    public delegate void Failure(DiscordClient Client, DiscordMessageEventArgs Message, Exception Error);
+    public delegate bool Predicate(DiscordMessageEventArgs Message);
+    public delegate void Implment(DiscordMessageEventArgs Message);
+    public delegate void Failure(DiscordMessageEventArgs Message, Exception Error);
 
     class Command
     {
@@ -25,24 +25,24 @@ namespace Zen.Zenbot
             this.Fail = Fail;
         }
 
-        public void Invoke(DiscordClient Client, DiscordMessageEventArgs Message)
+        public void Invoke(DiscordMessageEventArgs MessageEvent)
         {
             try
             {
-                if (Pred(Client, Message))
+                if (Pred(MessageEvent))
                 {
-                    Impl(Client, Message);
+                    Impl(MessageEvent);
                 }
                 else
                 {
-                    Deny(Client, Message);
+                    Deny(MessageEvent);
                 }
             }
             catch (Exception e)
             {
                 try
                 {
-                    Fail(Client, Message, e);
+                    Fail(MessageEvent, e);
                 }
                 catch { /* Maybe we should handle this case some time. */ };
             }
