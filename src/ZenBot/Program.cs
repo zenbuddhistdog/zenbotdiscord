@@ -6,39 +6,94 @@ using DiscordSharp;
 
 namespace Zen.Zenbot
 {
+    struct BotData
+    {
+        public string Username;
+        public string Secret;
+        public string Token;
+        public string BotID;
+        public string ClientID;
+    }
+
     static class Program
     {
         private const string SettingsFile = "Zenbot.xml";
 
-        private static string token;
         private static Bot bot;
+        private static BotData data;
         private static DiscordClient client;
         private static Thread thread;
 
-        public static void LoadSettings(string settingsFileName)
+        private static void LoadSettings(string settingsFileName)
         {
-            var root = XElement.Load(settingsFileName);
+            try
+            {
+                Console.WriteLine("Loading settings");
 
-            XElement tokenElement = root.Elements("//Token").Single();
+                var root = XElement.Load(settingsFileName);
 
-            if (tokenElement == null)
-                throw new Exception("Token element not found.");
+                data = root.Elements("//Bot").Select(el => new BotData
+                {
+                    Username = el.Element("Username").Value,
+                    Secret = el.Element("Secret").Value,
+                    Token = el.Element("Token").Value,
+                    BotID = el.Element("BotID").Value,
+                    ClientID = el.Element("ClientID").Value
+                }).Single();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Failed to load settings: " + Environment.NewLine + e.ToString());
+            }
+        }
 
-            if (string.IsNullOrWhiteSpace(tokenElement.Value))
-                throw new Exception("Token element does not contain a token.");
+        private static void CreateBot()
+        {
+            try
+            {
+                Console.WriteLine("Creating client.");
 
-            token = tokenElement.Value;
+                client = new DiscordClient(data.Token, true, true);
+                client.ClientPrivateInformation.Email = "";
+                client.ClientPrivateInformation.Password = "";
+                client.ClientPrivateInformation.Username = data.Username;
+
+                Console.WriteLine("Creating bot.");
+
+                bot = new Bot(client);
+
+                Console.WriteLine("Creating thread.");
+
+                thread = new Thread(client.Connect);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Failed to load create bot: " + Environment.NewLine + e.ToString());
+            }
+        }
+
+        private static void Run()
+        {
+            try
+            {
+                Console.WriteLine("Starting.");
+                thread.Start();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Client threw exception: " + Environment.NewLine + e.ToString());
+            }
         }
 
         public static void Main(string[] args)
         {
             LoadSettings(SettingsFile);
+            CreateBot();
+            
+            Console.WriteLine("Press any key to close.");
+            Console.ReadKey();
 
-            client = new DiscordClient(token, true, true);
-            bot = new Bot(client);
-
-            thread = new Thread(client.Connect);
-            thread.Start();
+            Environment.Exit(0);
         }
     }
 }

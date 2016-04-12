@@ -51,13 +51,15 @@ namespace Zen.Zenbot
 
         private void Client_MessageReceived(object sender, DiscordMessageEventArgs e)
         {
+            if (e.author.ID == Client.Me.ID)
+                return;
+
             var extracted = CommandPattern.Match(e.message.Content);
 
             if (!extracted.Success)
                 return;
 
             var cmdName = extracted.Groups[1].Value.ToUpper();
-            
             Commands.Where(c => c.Name.ToUpper() == cmdName).Single().Invoke(Client, e);
         }
     }
