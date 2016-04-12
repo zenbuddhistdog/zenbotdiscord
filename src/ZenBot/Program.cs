@@ -6,13 +6,14 @@ using DiscordSharp;
 
 namespace Zen.Zenbot
 {
-    struct BotData
+    public struct BotData
     {
         public string Username;
         public string Secret;
         public string Token;
         public string BotID;
         public string ClientID;
+        public string OwnerID;
     }
 
     static class Program
@@ -32,13 +33,14 @@ namespace Zen.Zenbot
 
                 var root = XElement.Load(settingsFileName);
 
-                data = root.Elements("//Bot").Select(el => new BotData
+                data = root.Elements("Bot").Select(el => new BotData
                 {
                     Username = el.Element("Username").Value,
                     Secret = el.Element("Secret").Value,
                     Token = el.Element("Token").Value,
                     BotID = el.Element("BotID").Value,
-                    ClientID = el.Element("ClientID").Value
+                    ClientID = el.Element("ClientID").Value,
+                    OwnerID = el.Element("OwnerID").Value
                 }).Single();
             }
             catch (Exception e)
@@ -52,15 +54,13 @@ namespace Zen.Zenbot
             try
             {
                 Console.WriteLine("Creating client.");
-
-                client = new DiscordClient(data.Token, true, true);
-                client.ClientPrivateInformation.Email = "";
-                client.ClientPrivateInformation.Password = "";
-                client.ClientPrivateInformation.Username = data.Username;
+                
+                client = new DiscordClient(data.Token, true);
+                client.WriteLatestReady = true;
 
                 Console.WriteLine("Creating bot.");
 
-                bot = new Bot(client);
+                bot = new Bot(client, data);
 
                 Console.WriteLine("Creating thread.");
 
@@ -76,6 +76,12 @@ namespace Zen.Zenbot
         {
             try
             {
+                Console.WriteLine("Logging in.");
+                var request = client.SendLoginRequest();
+
+                if (request == null)
+                    throw new Exception("Client failed to login.");
+                
                 Console.WriteLine("Starting.");
                 thread.Start();
             }
@@ -89,9 +95,14 @@ namespace Zen.Zenbot
         {
             LoadSettings(SettingsFile);
             CreateBot();
+            Run();
             
-            Console.WriteLine("Press any key to close.");
             Console.ReadKey();
+
+            client.Logout();
+            client.Dispose();
+            
+            Thread.Sleep(2000);
 
             Environment.Exit(0);
         }
