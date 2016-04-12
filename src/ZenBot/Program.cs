@@ -6,16 +6,6 @@ using DiscordSharp;
 
 namespace Zen.Zenbot
 {
-    public struct BotData
-    {
-        public string Username;
-        public string Secret;
-        public string Token;
-        public string BotID;
-        public string ClientID;
-        public string OwnerID;
-    }
-
     static class Program
     {
         private const string SettingsFile = "Zenbot.xml";
@@ -25,23 +15,12 @@ namespace Zen.Zenbot
         private static DiscordClient client;
         private static Thread thread;
 
-        private static void LoadSettings(string settingsFileName)
+        private static void LoadSettings()
         {
             try
             {
                 Console.WriteLine("Loading settings");
-
-                var root = XElement.Load(settingsFileName);
-
-                data = root.Elements("Bot").Select(el => new BotData
-                {
-                    Username = el.Element("Username").Value,
-                    Secret = el.Element("Secret").Value,
-                    Token = el.Element("Token").Value,
-                    BotID = el.Element("BotID").Value,
-                    ClientID = el.Element("ClientID").Value,
-                    OwnerID = el.Element("OwnerID").Value
-                }).Single();
+                data = BotData.Load(SettingsFile).Single();
             }
             catch (Exception e)
             {
@@ -93,7 +72,7 @@ namespace Zen.Zenbot
 
         public static void Main(string[] args)
         {
-            LoadSettings(SettingsFile);
+            LoadSettings();
             CreateBot();
             Run();
             

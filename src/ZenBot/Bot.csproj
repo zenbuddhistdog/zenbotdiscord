@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bot.cs" />
+    <Compile Include="BotData.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>

@@ -10,10 +10,8 @@ namespace Zen.Zenbot
     public class Bot
     {
         private static string DenyMsg = "I can't do that, {0}.";
-
-        private const string CommandPrefix = @"&";
-        private static Regex CommandPattern = new Regex(@"^" + CommandPrefix + @"([^\s]+)\s?(.*)");
-
+        
+        private Regex CommandPattern;
         private List<Command> Commands;
         private DiscordClient Client;
         private BotData Data;
@@ -29,6 +27,8 @@ namespace Zen.Zenbot
             Client.SocketClosed += Client_SocketClosed;
             Client.UnknownMessageTypeReceived += Client_UnknownMessageTypeReceived;
             Client.TextClientDebugMessageReceived += Client_TextClientDebugMessageReceived;
+
+            CommandPattern = new Regex(@"^" + Data.Prefix + @"([^\s]+)\s?(.*)");
 
             BuildCommands();
         }
