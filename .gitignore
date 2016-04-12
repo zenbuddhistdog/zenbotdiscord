@@ -243,4 +243,5 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
-/Project1/Project1/zenbot2.cfg
+/src/ZenBot/zenbot2.cfg
+/src/ZenBot/Zenbot.xml
