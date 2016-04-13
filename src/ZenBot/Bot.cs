@@ -85,7 +85,7 @@ namespace Zen.Zenbot
 
         private void Client_MentionReceived(object sender, DiscordMessageEventArgs e)
         {
-            Chat(e.MessageText, e.Channel);
+            Chat(e.MessageText.Replace("@" + Client.Me.ID, "Cleverbot"), e.Channel);
         }
 
         private void Client_MessageReceived(object sender, DiscordMessageEventArgs e)
