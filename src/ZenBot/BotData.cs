@@ -28,7 +28,8 @@ namespace Zen.Zenbot
                 Token = el.Element("Token").Value,
                 BotID = el.Element("BotID").Value,
                 ClientID = el.Element("ClientID").Value,
-                OwnerID = el.Element("OwnerID").Value
+                OwnerID = el.Element("OwnerID").Value,
+                Prefix = el.Element("Prefix").Value,
             });
         }
     }

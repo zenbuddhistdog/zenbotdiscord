@@ -1,9 +1,11 @@
 ﻿using DiscordSharp;
 using DiscordSharp.Events;
+using DiscordSharp.Objects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using ChatterBotAPI;
 
 namespace Zen.Zenbot
 {
@@ -14,12 +16,17 @@ namespace Zen.Zenbot
         private Regex CommandPattern;
         private List<Command> Commands;
         private DiscordClient Client;
+        private ChatterBot Chatter;
+        private ChatterBotSession ChatSession;
         private BotData Data;
 
         public Bot(DiscordClient Client, BotData Data)
         {
             this.Client = Client;
             this.Data = Data;
+
+            Chatter = new ChatterBotFactory().Create(ChatterBotType.CLEVERBOT);
+            ChatSession = Chatter.CreateSession();
 
             Client.MessageReceived += Client_MessageReceived;
             Client.MentionReceived += Client_MentionReceived;
@@ -48,6 +55,11 @@ namespace Zen.Zenbot
             };
         }
 
+        private void Chat(string message, DiscordChannel channel)
+        {
+            Client.SendMessageToChannel(ChatSession.Think(message), channel);
+        }
+
         private void Client_TextClientDebugMessageReceived(object sender, LoggerMessageReceivedArgs e)
         {
             Console.WriteLine("Debug: " + e.message.Message);
@@ -73,8 +85,7 @@ namespace Zen.Zenbot
 
         private void Client_MentionReceived(object sender, DiscordMessageEventArgs e)
         {
-            // cleverbot like stupidity here.
-            throw new NotImplementedException();
+            Chat(e.MessageText, e.Channel);
         }
 
         private void Client_MessageReceived(object sender, DiscordMessageEventArgs e)
@@ -88,7 +99,17 @@ namespace Zen.Zenbot
                 return;
 
             var cmdName = extracted.Groups[1].Value.ToUpper();
-            Commands.Where(c => c.Name.ToUpper() == cmdName).Single().Invoke(e);
+
+            try
+            {
+                Commands.Where(c => c.Name.ToUpper() == cmdName).Single().Invoke(e);
+            }
+            catch (InvalidOperationException)
+            {
+                Client.SendMessageToChannel(
+                    string.Format("Sorry {0}, I have no idea how to '{1}'.", e.Author.Username, extracted.Groups[1].Value),
+                    e.Channel);
+            }
         }
     }
 }
