@@ -47,15 +47,14 @@ namespace Zen.Zenbot
 
         private Command SimpleCommand(string n, Implment i)
         {
-            return new Command(n, (m) => true, i,
-                (m) => Client.SendMessageToChannel(string.Format(DenyMsg, m.Author.Username), m.Channel),
+            return new Command(n, m => true, i, m => { },
                 (m, e) => Console.WriteLine(m.ToString() + Environment.NewLine + e.ToString()));
         }
 
         private Command OwnerCommand(string n, Implment i)
         {
-            return new Command(n, (m) => m.Author.ID == Data.OwnerID, i,
-                (m) => Client.SendMessageToChannel(string.Format(DenyMsg, m.Author.Username), m.Channel),
+            return new Command(n, m => m.Author.ID == Data.OwnerID, i,
+                m => Client.SendMessageToChannel(string.Format(DenyMsg, m.Author.Username), m.Channel),
                 (m, e) => Console.WriteLine(m.ToString() + Environment.NewLine + e.ToString()));
         }
 
@@ -64,30 +63,34 @@ namespace Zen.Zenbot
             return CommandPattern.Match(Message.Content).Groups[2].Value;
         }
 
+        private string UniqueName(DiscordMember m)
+        {
+            return "<@" + m.ID + ">";
+        }
+
         private void BuildCommands()
         {
             Commands = new List<Command> {
-                OwnerCommand("Logout", (m) => {
-                    Client.SendMessageToChannel("Goodbye!", m.Channel);
+                OwnerCommand("Logout", m => {
+                    m.Channel.SendMessage("Goodbye!");
                     Client.Logout();
                 }),
 
-                OwnerCommand("Game", (m) => {
+                OwnerCommand("Game", m => {
                     Client.UpdateCurrentGame(TrimCmd(m.Message));
-                    Client.SendMessageToChannel("Game Set!", m.Channel);
+                    m.Channel.SendMessage("Game Set!");
                 }),
 
-                OwnerCommand("Name", (m) => {
+                OwnerCommand("Name", m => {
                     var info = Client.ClientPrivateInformation.Copy();
                     info.Username = TrimCmd(m.Message);
 
                     Client.ChangeClientInformation(info);
-                    Client.SendMessageToChannel("Name Set!", m.Channel);
+                    m.Channel.SendMessage("Name Set!");
                 }),
 
-                OwnerCommand("Say", (m) => {
-                    Client.SendMessageToChannel(TrimCmd(m.Message), m.Channel);
-                }),
+                OwnerCommand("Say", m =>
+                    m.Channel.SendMessage(TrimCmd(m.Message))),
             };
         }
 
@@ -107,12 +110,14 @@ namespace Zen.Zenbot
             ChatSession = new ChatterBotFactory().Create(ChatterBotType.CLEVERBOT).CreateSession();
         }
 
-        private void Chat(string message, DiscordChannel channel)
+        private void Chat(DiscordMessage m, DiscordChannel c)
         {
             if (ChatThread != null && ChatThread.IsAlive)
                 ChatThread.Join();
 
-            ChatThread = new Thread(() => Client.SendMessageToChannel(ChatSession.Think(message), channel));
+            ChatThread = new Thread(() => c.SendMessage(UniqueName(m.Author) + " " +
+                ChatSession.Think(m.Content.Replace("@" + Client.Me.ID, "Cleverbot"))));
+
             ChatThread.Start();
         }
 
@@ -149,7 +154,10 @@ namespace Zen.Zenbot
 
         private void Client_MentionReceived(object sender, DiscordMessageEventArgs e)
         {
-            Chat(e.MessageText.Replace("@" + Client.Me.ID, "Cleverbot"), e.Channel);
+            if (e.Author.ID == Client.Me.ID)
+                return;
+
+            Chat(e.Message, e.Channel);
         }
 
         private void Client_MessageReceived(object sender, DiscordMessageEventArgs e)
