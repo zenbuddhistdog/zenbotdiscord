@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using ChatterBotAPI;
+using System.Threading;
 
 namespace Zen.Zenbot
 {
@@ -16,27 +17,31 @@ namespace Zen.Zenbot
         private Regex CommandPattern;
         private List<Command> Commands;
         private DiscordClient Client;
-        private ChatterBot Chatter;
+        
         private ChatterBotSession ChatSession;
+        private Thread ChatThread;
+
         private BotData Data;
+        private bool Reconnecting;
 
         public Bot(DiscordClient Client, BotData Data)
         {
             this.Client = Client;
             this.Data = Data;
 
-            Chatter = new ChatterBotFactory().Create(ChatterBotType.CLEVERBOT);
-            ChatSession = Chatter.CreateSession();
+            Reconnecting = false;
 
             Client.MessageReceived += Client_MessageReceived;
             Client.MentionReceived += Client_MentionReceived;
             Client.Connected += Client_Connected;
             Client.SocketClosed += Client_SocketClosed;
+            Client.SocketOpened += Client_SocketOpened;
             Client.UnknownMessageTypeReceived += Client_UnknownMessageTypeReceived;
             Client.TextClientDebugMessageReceived += Client_TextClientDebugMessageReceived;
 
             CommandPattern = new Regex(@"^" + Data.Prefix + @"([^\s]+)\s?(.*)");
 
+            MakeChatSession();
             BuildCommands();
         }
 
@@ -55,9 +60,29 @@ namespace Zen.Zenbot
             };
         }
 
+        private void Reconnect()
+        {
+            Reconnecting = true;
+
+            while (Reconnecting)
+            {
+                Client.Connect();
+                Thread.Sleep(10000);
+            }
+        }
+
+        private void MakeChatSession()
+        {
+            ChatSession = new ChatterBotFactory().Create(ChatterBotType.CLEVERBOT).CreateSession();
+        }
+
         private void Chat(string message, DiscordChannel channel)
         {
-            Client.SendMessageToChannel(ChatSession.Think(message), channel);
+            if (ChatThread != null && ChatThread.IsAlive)
+                ChatThread.Join();
+
+            ChatThread = new Thread(() => Client.SendMessageToChannel(ChatSession.Think(message), channel));
+            ChatThread.Start();
         }
 
         private void Client_TextClientDebugMessageReceived(object sender, LoggerMessageReceivedArgs e)
@@ -74,6 +99,14 @@ namespace Zen.Zenbot
         private void Client_SocketClosed(object sender, DiscordSocketClosedEventArgs e)
         {
             Console.WriteLine("Connection closed: [" + e.Code + "] [" + e.WasClean + "] " + e.Reason);
+
+            if (!e.WasClean)
+                Reconnect();
+        }
+ 
+        private void Client_SocketOpened(object sender, EventArgs e)
+        {
+            Reconnecting = false;
         }
 
         private void Client_Connected(object sender, DiscordConnectEventArgs e)
@@ -93,7 +126,7 @@ namespace Zen.Zenbot
             if (e.Author.ID == Client.Me.ID)
                 return;
 
-            var extracted = CommandPattern.Match(e.Message.Content);
+            var extracted = CommandPattern.Match(e.MessageText);
 
             if (!extracted.Success)
                 return;
