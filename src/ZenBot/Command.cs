@@ -1,5 +1,4 @@
-﻿using DiscordSharp;
-using DiscordSharp.Events;
+﻿using DiscordSharp.Events;
 using System;
 
 namespace Zen.Zenbot

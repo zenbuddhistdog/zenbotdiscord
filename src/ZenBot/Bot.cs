@@ -1,11 +1,11 @@
-﻿using DiscordSharp;
+﻿using ChatterBotAPI;
+using DiscordSharp;
 using DiscordSharp.Events;
 using DiscordSharp.Objects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using ChatterBotAPI;
 using System.Threading;
 
 namespace Zen.Zenbot
@@ -45,18 +45,49 @@ namespace Zen.Zenbot
             BuildCommands();
         }
 
+        private Command SimpleCommand(string n, Implment i)
+        {
+            return new Command(n, (m) => true, i,
+                (m) => Client.SendMessageToChannel(string.Format(DenyMsg, m.Author.Username), m.Channel),
+                (m, e) => Console.WriteLine(m.ToString() + Environment.NewLine + e.ToString()));
+        }
+
+        private Command OwnerCommand(string n, Implment i)
+        {
+            return new Command(n, (m) => m.Author.ID == Data.OwnerID, i,
+                (m) => Client.SendMessageToChannel(string.Format(DenyMsg, m.Author.Username), m.Channel),
+                (m, e) => Console.WriteLine(m.ToString() + Environment.NewLine + e.ToString()));
+        }
+
+        private string TrimCmd(DiscordMessage Message)
+        {
+            return CommandPattern.Match(Message.Content).Groups[2].Value;
+        }
+
         private void BuildCommands()
         {
             Commands = new List<Command> {
-                new Command("Logout",
-                    (m) => m.Author.ID == Data.OwnerID,
-                    (m) => {
-                        Client.SendMessageToChannel("Goodbye!", m.Channel);
-                        Client.Logout();
-                    },
-                    (m) => Client.SendMessageToChannel(string.Format(DenyMsg, m.Author.Username), m.Channel),
-                    (m, e) => Console.WriteLine(m.ToString() + Environment.NewLine + e.ToString())
-                ),
+                OwnerCommand("Logout", (m) => {
+                    Client.SendMessageToChannel("Goodbye!", m.Channel);
+                    Client.Logout();
+                }),
+
+                OwnerCommand("Game", (m) => {
+                    Client.UpdateCurrentGame(TrimCmd(m.Message));
+                    Client.SendMessageToChannel("Game Set!", m.Channel);
+                }),
+
+                OwnerCommand("Name", (m) => {
+                    var info = Client.ClientPrivateInformation.Copy();
+                    info.Username = TrimCmd(m.Message);
+
+                    Client.ChangeClientInformation(info);
+                    Client.SendMessageToChannel("Name Set!", m.Channel);
+                }),
+
+                OwnerCommand("Say", (m) => {
+                    Client.SendMessageToChannel(TrimCmd(m.Message), m.Channel);
+                }),
             };
         }
 
