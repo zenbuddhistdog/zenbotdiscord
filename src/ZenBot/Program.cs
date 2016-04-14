@@ -78,6 +78,7 @@ namespace Zen.Zenbot
             
             Console.ReadKey();
 
+            bot.Close();
             client.Logout();
             client.Dispose();
             

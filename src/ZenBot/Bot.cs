@@ -23,6 +23,7 @@ namespace Zen.Zenbot
 
         private BotData Data;
         private bool Reconnecting;
+        private bool Closing;
 
         public Bot(DiscordClient Client, BotData Data)
         {
@@ -30,6 +31,7 @@ namespace Zen.Zenbot
             this.Data = Data;
 
             Reconnecting = false;
+            Closing = false;
 
             Client.MessageReceived += Client_MessageReceived;
             Client.MentionReceived += Client_MentionReceived;
@@ -43,6 +45,12 @@ namespace Zen.Zenbot
 
             MakeChatSession();
             BuildCommands();
+        }
+
+        public void Close()
+        {
+            Reconnecting = false;
+            Closing = true;
         }
 
         private Command SimpleCommand(string n, Implment i)
@@ -136,7 +144,7 @@ namespace Zen.Zenbot
         {
             Console.WriteLine("Connection closed: [" + e.Code + "] [" + e.WasClean + "] " + e.Reason);
 
-            if (!e.WasClean)
+            if (!Closing)
                 Reconnect();
         }
  
